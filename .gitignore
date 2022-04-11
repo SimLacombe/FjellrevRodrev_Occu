@@ -40,4 +40,5 @@ vignettes/*.pdf
 
 #Data
 
-/data
+/data/main_dat/*
+/data/covs/*
