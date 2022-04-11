@@ -87,7 +87,8 @@ sites_tokeep <- daily_dat %>%
   dplyr::filter(Nweek>=Nweek_min)
 
 daily_dat <- daily_dat%>%
-  dplyr::inner_join(sites_tokeep)
+  dplyr::inner_join(sites_tokeep)%>%
+  dplyr::filter(week <= nweeks)
 
 ###Get the occupancy state (1 = no animal, 2 = RF only, 3 = AF only, 4 = both, NA = NA)
 daily_dat$state <- paste0(daily_dat$RedFox,daily_dat$ArcticFox)
