@@ -1,17 +1,13 @@
-rm(list=ls())
-
-library(devtools)
-install_github("vqv/ggbiplot")
-
-sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggbiplot'),
-       function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
-
-##PARAMETERS TO SET MANUALY----
-YEARMIN = 2006
-YEARMAX = 2016
-Nobs_min = 3 #min number of days sampled to consider week valid
-Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
-CUTOFF = 35 #min number of photo a day to consider the observation valid
+# 
+# sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggbiplot'),
+#        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
+# 
+# ##PARAMETERS TO SET MANUALY----
+# YEARMIN = 2006
+# YEARMAX = 2016
+# Nobs_min = 3 #min number of days sampled to consider week valid
+# Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
+# CUTOFF = 35 #min number of photo a day to consider the observation valid
 
 julian_used = 49:118
 week_used = 7:16
@@ -108,8 +104,8 @@ cat("##DATA AS ARRAY----- \n")
 #fill daily_dat with NA for julian days not sampled 
 daily_dat_all <- data.frame(site.year = rep(site_infos$site.year, each = K*T),
                             week = rep(week_used, each = K, M),
-                            day= rep(julian_used, M))
-daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "day"),all=T)
+                            julian2= rep(julian_used, M))
+daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "julian2"),all=T)
 
 ###Get array M*T*K
 ob_state <- array(daily_dat$lvls, dim=c(K,T,M))
@@ -166,7 +162,6 @@ covs$propprod10 <- prod[site_infos$loc,]$propprod10
 ###Get coord. on the PCA space based on geographical features
 
 covs_pca <- prcomp(covs[,c("altitude","distroad", "distforest", "distcoast", "propprod5")], scale. = TRUE)
-#ggbiplot(covs_pca)
 
 covs <- cbind(covs, covs_pca$x[,c(1,2)])
 ##PC1: coast to land gradient (CLG)
