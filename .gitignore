@@ -39,6 +39,3 @@ vignettes/*.pdf
 .Renviron
 
 #Data
-
-/data/main_dat/*
-/data/covs/*
