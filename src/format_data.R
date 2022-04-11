@@ -54,15 +54,15 @@ dat.df$site.year <- factor(dat.df$site.year, levels = unique(dat.df$site.year))
 
 ##FILTER DATA ----
 cat("##FILTER DATA ----- \n")
-  
+
 ###condense to daily observations 
 daily_dat <- dat.df%>%
   dplyr::group_by(site.year, year, loc, julian2)%>%
   dplyr::summarise(RedFox  = as.numeric(any(RedFox>0)),
-                  ArcticFox  = as.numeric(any(ArcticFox>0)),
-                  Bait = as.numeric(any(bait_corr>0)),
-                  newbait = as.numeric(any(newbait==1)),
-                  Npic = n())%>%
+                   ArcticFox  = as.numeric(any(ArcticFox>0)),
+                   Bait = as.numeric(any(bait_corr>0)),
+                   newbait = as.numeric(any(newbait==1)),
+                   Npic = n())%>%
   dplyr::filter(Npic>=CUTOFF)
 
 daily_dat <- daily_dat%>%
@@ -80,7 +80,7 @@ weeks_tokeep <- daily_dat %>%
 
 daily_dat <- daily_dat%>%
   dplyr::inner_join(weeks_tokeep)
-  
+
 sites_tokeep <- daily_dat %>% 
   dplyr::group_by(site.year) %>% 
   dplyr::summarise(Nweek = length(unique(week)))%>%
@@ -116,8 +116,8 @@ K <- 7
 cat("##DATA AS ARRAY----- \n")
 #fill daily_dat with NA for julian days not sampled 
 daily_dat_all <- data.frame(site.year = rep(site_infos$site.year, each = K*T),
-                           week = rep(1:T, each = K, M),
-                           day= rep(1:7,T*M))
+                            week = rep(1:T, each = K, M),
+                            day= rep(1:7,T*M))
 daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "day"),all=T)
 
 ###Get array M*T*K
@@ -128,7 +128,7 @@ ob_state <- aperm(ob_state, c(3,2,1))
 min_occ <- daily_dat%>%
   dplyr::group_by(site.year, week)%>%
   dplyr::summarise(RedFox = as.numeric(any(RedFox>0, na.rm=T)),
-            ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
+                   ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
 
 min_occ$state <- paste0(min_occ$RedFox, min_occ$ArcticFox)
 min_occ <- left_join(min_occ, categories, by = "state")
@@ -197,11 +197,11 @@ rodents_data <- rodents_data%>%
 covs <- covs%>%
   dplyr::rowwise()%>%
   dplyr::mutate(rodents_fall = sum(apply(as.matrix(rodents_data[rodents_data$season=="fall"&
-                                                          rodents_data$year+1==year&
-                                                          rodents_data$region==region,5:9]),2,mean)),
-         rodents_spr = sum(apply(as.matrix(rodents_data[rodents_data$season=="spring"&
-                                                        rodents_data$year==year&
-                                                        rodents_data$region==region,5:9]),2,mean)))
+                                                                  rodents_data$year+1==year&
+                                                                  rodents_data$region==region,5:9]),2,mean)),
+                rodents_spr = sum(apply(as.matrix(rodents_data[rodents_data$season=="spring"&
+                                                                 rodents_data$year==year&
+                                                                 rodents_data$region==region,5:9]),2,mean)))
 covs$rodents_mean <- (covs$rodents_fall+covs$rodents_spr)/2
 
 
@@ -213,6 +213,4 @@ covs[,c("altitude", "distroad", "distforest", "distcoast", "propprod5", "proppro
 
 
 covs$year <- as.numeric(covs$year)
-
-
 
