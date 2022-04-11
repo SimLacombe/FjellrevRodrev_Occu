@@ -24,105 +24,112 @@ years <- as.character(YEARMIN:YEARMAX)
 years_id <- which(allyears %in% years)
 
 control_region <- c("komag", "nyborg", "stjernevann")
+
 ##LOAD DATA -----
 cat("##LOAD DATA ----- \n")
 
 dat.l <- foreach(i = data.filenames[years_id]) %do%{
-  readRDS(file = paste0(data.path, "/", i))%>%as.data.table()
+  dat <-  readRDS(file = paste0(data.path, "/", i))%>%as.data.table()
+  dat%>%
+    mutate(week = julian1%/%7) -> dat
+  dat
 }
 allyears <- years
 names(dat.l) <- years
-dat.df <- rbindlist(dat.l, fill = TRUE)%>%
-  filter(site %in% control_region)%>%
-  filter(vis==1)
+dat.df <- rbindlist(dat.l, fill = TRUE)
 
 dat.df$site.year <- paste0(dat.df$loc, ".", dat.df$year)
 dat.df$site.year <- factor(dat.df$site.year, levels = unique(dat.df$site.year))
 
 ##FILTER DATA ----
 cat("##FILTER DATA ----- \n")
+# Here we keep : 
+#   - days with more than CUTOFF visible pictures
+#   - weeks between 7 and 16 (18/02-22/04)
+#   - site.years with more than n_week_min weeks
 
-###condense to daily observations 
+#Get number of photos with vis = 1 per day
+photos_per_day <- dat.df%>%
+  filter(vis==1)%>%
+  filter(site %in% control_region)%>%
+  group_by(site.year, year, loc, week, julian1)%>%
+  summarise(photos = n())%>%
+  filter(week %in% week_used)
+
+#condense to daily observations 
 daily_dat <- dat.df%>%
-  dplyr::group_by(site.year, year, loc, julian2)%>%
-  dplyr::summarise(RedFox  = as.numeric(any(RedFox>0)),
-                   ArcticFox  = as.numeric(any(ArcticFox>0)),
-                   Bait = as.numeric(any(bait_corr>0)),
-                   newbait = as.numeric(any(newbait==1)),
-                   Npic = n())%>%
-  dplyr::filter(Npic>=CUTOFF)
+  filter(vis==1)%>%
+  filter(site %in% control_region)%>%
+  group_by(site.year, year, loc, week, julian1)%>%
+  summarise(RedFox  = as.numeric(any(RedFox>0)),
+            ArcticFox  = as.numeric(any(ArcticFox>0)),
+            Bait = as.numeric(any(bait_corr>0)))%>%
+  filter(week %in% week_used)
 
-daily_dat <- daily_dat%>%
-  dplyr::group_by(site.year)%>%
-  dplyr::mutate(week = julian2  %/% 7)%>%
-  dplyr::group_by(site.year, week)%>%
-  dplyr::mutate(day = 1:n())
+#If less than CUTOFF photos, day considered as NA
+daily_dat[photos_per_day$photos<CUTOFF, c("RedFox", "ArcticFox")] <- NA
 
-### filter based on number of observation per weeks and number of weeks
-
-weeks_tokeep <- daily_dat %>% 
-  dplyr::group_by(site.year, week) %>% 
-  dplyr::summarise(Nobs = length(unique(julian2)))%>%
-  dplyr::filter(Nobs>=Nobs_min)
-
-daily_dat <- daily_dat%>%
-  dplyr::inner_join(weeks_tokeep)
-
-sites_tokeep <- daily_dat %>% 
-  dplyr::group_by(site.year) %>% 
-  dplyr::summarise(Nweek = length(unique(week)))%>%
-  dplyr::filter(Nweek>=Nweek_min)
-
-daily_dat <- daily_dat%>%
-  dplyr::inner_join(sites_tokeep)%>%
-  filter(week %in% week_used,
-         julian2 %in% julian_used)
-
-###Get the occupancy state (1 = no animal, 2 = RF only, 3 = AF only, 4 = both, NA = NA)
+#Get the occupancy state (1 = no animal, 2 = RF only, 3 = AF only, 4 = both, NA = NA)
 daily_dat$state <- paste0(daily_dat$RedFox,daily_dat$ArcticFox)
 categories <- data.frame(state = c("00", "10", "01", "11"),
                          lvls = c(seq(1:4)))
 daily_dat <- dplyr::left_join(daily_dat, categories, by = "state")
 
-daily_dat$lvls <- factor(daily_dat$lvls, levels = unique(daily_dat$lvls))
+# remove site-year associations that have less than N_week_min
+site.year_info <- daily_dat %>% 
+  group_by(site.year) %>% 
+  summarise(year = unique(year[!is.na(year)]),
+            loc = unique(loc[!is.na(loc)]),
+            Nweek = length(unique(week)))
+
+daily_dat<- daily_dat[-which(daily_dat$site.year %in%
+                               site.year_info$site.year[site.year_info$Nweek < Nweek_min]),]
+
+photos_per_day <- photos_per_day[-which(photos_per_day$site.year %in%
+                                          site.year_info$site.year[site.year_info$Nweek < Nweek_min]),]
+
+site.year_info <- filter(site.year_info, Nweek >= Nweek_min)
 
 ##GET  PARAMETERS ----
 cat("##GET PARAMETERS ----- \n")
-###Number of site.year
-site_infos <- daily_dat%>%
-  dplyr::group_by(site.year,loc,year)%>%
-  dplyr::summarize()
-M <- nrow(site_infos)
+#Number of site.year
+site.year <- unique(daily_dat$site.year)
+M <- length(site.year)
 
-###Number of preliminary seasons
+#Number of preliminary seasons
 T <- length(week_used)
 
-### Number of days per week
+# Number of days per week
 K <- 7
 
 ##GET DATA ARRAY M*T*K----
 cat("##DATA AS ARRAY----- \n")
 #fill daily_dat with NA for julian days not sampled 
-daily_dat_all <- data.frame(site.year = rep(site_infos$site.year, each = K*T),
+daily_dat_all <- data.frame(site.year = rep(site.year, each = K*T),
                             week = rep(week_used, each = K, M),
-                            julian2= rep(julian_used, M))
-daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "julian2"),all=T)
+                            julian1= rep(julian_used, M))
+daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "julian1"),all=T)
+photos_per_day <- merge(photos_per_day,daily_dat_all, by = c("site.year", "week", "julian1"),all=T)
 
-###Get array M*T*K
+#Get array M*T*K
 ob_state <- array(daily_dat$lvls, dim=c(K,T,M))
 ob_state <- aperm(ob_state, c(3,2,1))
 
-###Get minimal occupancy state
+photos_samp <- array(daily_dat$lvls, dim=c(K,T,M))
+photos_samp <- aperm(photos_samp, c(3,2,1))
+
+#Get minimal occupancy state
+daily_dat$lvls <- factor(daily_dat$lvls, levels = unique(daily_dat$lvls))
 min_occ <- daily_dat%>%
-  dplyr::group_by(site.year, week)%>%
-  dplyr::summarise(RedFox = as.numeric(any(RedFox>0, na.rm=T)),
-                   ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
+  group_by(site.year, week)%>%
+  summarise(RedFox = as.numeric(any(RedFox>0, na.rm=T)),
+            ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
 
 min_occ$state <- paste0(min_occ$RedFox, min_occ$ArcticFox)
 min_occ <- left_join(min_occ, categories, by = "state")
 min_occ$lvls[is.na(min_occ$lvls)] <- NA #all species potentially present
 
-init <- matrix(min_occ$lvls, nrow = M, ncol = T, byrow = TRUE)
+init <- matrix(min_occ$lvls, nrow = M, ncol = T, byrow = T)
 
 ###Get observation covariates 
 
