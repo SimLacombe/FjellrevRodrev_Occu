@@ -76,7 +76,7 @@ data_list <- list(psi_cov = covs[,psi_covs]%>%as.matrix(),
 
 
 M <- run.jags(model = "src/dcom.R",
-               monitor = c("a", "b", "d","g","h", "rho_bait", "yr_rho", "z"),
+               monitor = c("a", "b", "d","f","g","h", "rho_bait", "yr_rho", "z"),
                data = data_list,
                n.chains = n.chains,
                inits = inits,
@@ -91,5 +91,5 @@ M <- run.jags(model = "src/dcom.R",
     
 M_matrix <- as.matrix(as.mcmc.list(M), chains = TRUE)
     
-saveRDS(M, "results/DCOM_models/M.rds")
+saveRDS(M, "outputs/M.rds")
  
