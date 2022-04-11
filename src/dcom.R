@@ -113,7 +113,7 @@ rdm[j, 4, 4, 2] <- exp( rho[1, j] + rho_bait[1] + rho[2, j] + rho_bait[2]) #|OS 
 ######
 for( i in 1:nspec ) {
 # base occupancy
-psinit[i ,j]  <- yr_psi[i, year_cov[j,1]] + inprod( a[i, ], psi_cov[j, ] )
+psinit[i ,j]  <- inprod( a[i, ], psi_cov[j, ] )
 # base colonization
 gam[i, j] <-      inprod( b[i, ], gam_cov[j, ] ) 
 # base extinction
@@ -160,7 +160,6 @@ eps_one[i, j] <- inprod( d[i, ], eps_cov[j, ] ) + tau[i, j]
       h[i, taup] ~ dlogis(0, 1)
     }
     for ( yrp in 1:nyear ){
-      yr_psi[i, yrp] ~ dlogis(0, 1)
       yr_rho[i, yrp] ~ dlogis(0, 1)
     }
     rho_bait[i] ~ dlogis(0,1)

@@ -106,7 +106,7 @@ site_infos <- daily_dat%>%
 M <- nrow(site_infos)
 
 ###Number of preliminary seasons
-T <- max(daily_dat$week)
+T <- nweeks
 
 ### Number of days per week
 K <- 7

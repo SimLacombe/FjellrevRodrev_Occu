@@ -26,6 +26,7 @@ YEARMIN = 2006
 YEARMAX = 2016
 Nobs_min = 3 #min number of days sampled to consider week valid
 Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
+nweeks = 7 #max number of weeks per year
 CUTOFF = 35 #min number of photo a day to consider the observation valid
 
 ##GET LIBRARIES, PATHS AND FILENAMES-----

@@ -93,8 +93,11 @@ site.year_info <- filter(site.year_info, Nweek >= Nweek_min)
 ##GET  PARAMETERS ----
 cat("##GET PARAMETERS ----- \n")
 #Number of site.year
+site_infos <- daily_dat%>%
+  dplyr::group_by(site.year,loc,year)%>%
+  dplyr::summarize()
 site.year <- unique(daily_dat$site.year)
-M <- length(site.year)
+M <- nrow(site_infos)
 
 #Number of preliminary seasons
 T <- length(week_used)
