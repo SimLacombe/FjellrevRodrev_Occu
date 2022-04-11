@@ -1,17 +1,17 @@
 rm(list=ls())
-# 
-# library(devtools)
-# install_github("vqv/ggbiplot")
-# 
-# sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggbiplot'),
-#        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
-# 
-# ##PARAMETERS TO SET MANUALY----
-# YEARMIN = 2006
-# YEARMAX = 2021
-# Nobs_min = 3 #min number of days sampled to consider week valid
-# Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
-# CUTOFF = 35 #min number of photo a day to consider the observation valid
+
+library(devtools)
+install_github("vqv/ggbiplot")
+
+sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggbiplot'),
+       function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
+
+##PARAMETERS TO SET MANUALY----
+YEARMIN = 2006
+YEARMAX = 2016
+Nobs_min = 3 #min number of days sampled to consider week valid
+Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
+CUTOFF = 35 #min number of photo a day to consider the observation valid
 
 julian_used = 49:118
 week_used = 7:16
@@ -57,7 +57,7 @@ daily_dat <- dat.df%>%
 
 daily_dat <- daily_dat%>%
   dplyr::group_by(site.year)%>%
-  dplyr::mutate(week = (julian2 - julian2[1]) %/% 7+1)%>%
+  dplyr::mutate(week = julian2  %/% 7)%>%
   dplyr::group_by(site.year, week)%>%
   dplyr::mutate(day = 1:n())
 
@@ -77,7 +77,9 @@ sites_tokeep <- daily_dat %>%
   dplyr::filter(Nweek>=Nweek_min)
 
 daily_dat <- daily_dat%>%
-  dplyr::inner_join(sites_tokeep)
+  dplyr::inner_join(sites_tokeep)%>%
+  filter(week %in% week_used,
+         julian2 %in% julian_used)
 
 ###Get the occupancy state (1 = no animal, 2 = RF only, 3 = AF only, 4 = both, NA = NA)
 daily_dat$state <- paste0(daily_dat$RedFox,daily_dat$ArcticFox)
@@ -96,7 +98,7 @@ site_infos <- daily_dat%>%
 M <- nrow(site_infos)
 
 ###Number of preliminary seasons
-T <- max(daily_dat$week)
+T <- length(week_used)
 
 ### Number of days per week
 K <- 7
@@ -105,8 +107,8 @@ K <- 7
 cat("##DATA AS ARRAY----- \n")
 #fill daily_dat with NA for julian days not sampled 
 daily_dat_all <- data.frame(site.year = rep(site_infos$site.year, each = K*T),
-                            week = rep(1:T, each = K, M),
-                            day= rep(1:7,T*M))
+                            week = rep(week_used, each = K, M),
+                            day= rep(julian_used, M))
 daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "day"),all=T)
 
 ###Get array M*T*K
@@ -123,7 +125,7 @@ min_occ$state <- paste0(min_occ$RedFox, min_occ$ArcticFox)
 min_occ <- left_join(min_occ, categories, by = "state")
 min_occ$lvls[is.na(min_occ$lvls)] <- NA #all species potentially present
 
-init <- matrix(min_occ$lvls, nrow = M, ncol = T, byrow = T)
+init <- matrix(min_occ$lvls, nrow = M, ncol = T, byrow = TRUE)
 
 ###Get observation covariates 
 
