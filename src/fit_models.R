@@ -45,7 +45,7 @@ burnin <- 5000
 sample <- ceiling(3000)
 thin <- 5
   
-cat("###M0----------------\n")
+cat("###M----------------\n")
 ######################################################
 #                   MODEL M
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,18 +64,19 @@ data_list <- list(psi_cov = covs[,psi_covs]%>%as.matrix(),
                   eps_cov = covs[,eps_covs]%>%as.matrix(),
                   pi_cov = covs[,pi_covs]%>%as.matrix(),
                   tau_cov = covs[,tau_covs]%>%as.matrix(),
+                  rho_cov = covs[,rho_covs]%>%as.matrix(),
                   year_cov = covs[,"year"]%>%as.matrix(),
                   ncov_psi = length(psi_covs), ncov_gam = length(gam_covs),
                   ncov_eps = length(eps_covs), ncov_pi = length(pi_covs),
-                  ncov_tau = length(tau_covs),
+                  ncov_tau = length(tau_covs), ncov_rho = length(pi_covs),
                   nspec = 2, nseason = T, nsite = M,
                   nsurvey = K, nout = 4, nyear = length(allyears),
                   y = ob_state,
                   bait=bait)
 
 
-M <- run.jags(model = "src/DCOM/JAGS/dcom_inxs_nodelta.R",
-               monitor = c("a", "b", "d","g","h", "rho_bait", "yr_rho", "z"),
+M <- run.jags(model = "src/dcom.R",
+               monitor = c("a", "b", "d","f","g","h", "rho_bait", "yr_rho", "z"),
                data = data_list,
                n.chains = n.chains,
                inits = inits,
@@ -90,5 +91,5 @@ M <- run.jags(model = "src/DCOM/JAGS/dcom_inxs_nodelta.R",
     
 M_matrix <- as.matrix(as.mcmc.list(M), chains = TRUE)
     
-saveRDS(M, "results/DCOM_models/M.rds")
+saveRDS(M, "outputs/M.rds")
  
