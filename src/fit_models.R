@@ -22,11 +22,15 @@
 # install.packages("doParallel")
 rm(list=ls())
 ##PARAMETERS TO SET MANUALY----
-YEARMIN = 2017
-YEARMAX = 2021
+YEARMIN = 2006
+YEARMAX = 2016
+
+julian_used = 49:104
+week_used = 7:14
+
 Nobs_min = 3 #min number of days sampled to consider week valid
 Nweek_min = 3 #min number of weeks sampled a year to consider the year valid
-nweeks = 7 #max number of weeks per year
+
 CUTOFF = 35 #min number of photo a day to consider the observation valid
 
 ##GET LIBRARIES, PATHS AND FILENAMES-----
@@ -59,16 +63,16 @@ cat("###M----------------\n")
 ######################################################
 #                   MODEL M
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    
-psi_covs <- c("int","distroad", "FTG", "rodents_fall")
-gam_covs <- c("int","distroad","FTG", "rodents_fall")
-eps_covs <- c("int","distroad","FTG", "rodents_fall")
+
+psi_covs <- c("int","CLG","FTG", "rodents_fall")
+gam_covs <- c("int","CLG","FTG", "rodents_fall")
+eps_covs <- c("int","CLG","FTG", "rodents_fall")
 pi_covs  <- c("int")
 tau_covs <- c("int")
 rho_covs <- c("rodents_fall")
-    
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    
+
 data_list <- list(psi_cov = covs[,psi_covs]%>%as.matrix(),
                   gam_cov = covs[,gam_covs]%>%as.matrix(),
                   eps_cov = covs[,eps_covs]%>%as.matrix(),
@@ -86,20 +90,19 @@ data_list <- list(psi_cov = covs[,psi_covs]%>%as.matrix(),
 
 
 M <- run.jags(model = "src/dcom.R",
-               monitor = c("a", "b", "d","f","g","h", "rho_bait", "yr_rho", "z"),
-               data = data_list,
-               n.chains = n.chains,
-               inits = inits,
-               adapt = adapt,
-               burnin = burnin,
-               sample = sample,
-               thin = thin,
-               summarise = TRUE,
-               plots = FALSE,
-               method = "parallel")
-    
-    
+              monitor = c("a", "b", "d","f","g","h", "rho_bait", "yr_rho", "z"),
+              data = data_list,
+              n.chains = n.chains,
+              inits = inits,
+              adapt = adapt,
+              burnin = burnin,
+              sample = sample,
+              thin = thin,
+              summarise = TRUE,
+              plots = FALSE,
+              method = "parallel")
+
+
 M_matrix <- as.matrix(as.mcmc.list(M), chains = TRUE)
-    
+
 saveRDS(M, "outputs/M.rds")
- 
