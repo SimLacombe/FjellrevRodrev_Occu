@@ -1,27 +1,11 @@
-##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##
-##      Arctic Foxes in Varanger
-##               --
-##    Prepare data for DCOM (Fedini 2018)
-##
-##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##
-##***************************
-##Execute from fit_models.R
-##***************************
-##
-
 # rm(list=ls())
-# 
-# library(devtools)
-# install_github("vqv/ggbiplot")
 # 
 # sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggbiplot'),
 #        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
 # 
 # ##PARAMETERS TO SET MANUALY----
 # YEARMIN = 2006
-# YEARMAX = 2021
+# YEARMAX = 2016
 # Nobs_min = 3 #min number of days sampled to consider week valid
 # Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
 # CUTOFF = 35 #min number of photo a day to consider the observation valid
@@ -37,17 +21,19 @@ years <- as.character(YEARMIN:YEARMAX)
 years_id <- which(allyears %in% years)
 
 control_region <- c("komag", "nyborg", "stjernevann")
+
 ##LOAD DATA -----
 cat("##LOAD DATA ----- \n")
 
 dat.l <- foreach(i = data.filenames[years_id]) %do%{
-  readRDS(file = paste0(data.path, "/", i))%>%as.data.table()
+  dat <-  readRDS(file = paste0(data.path, "/", i))%>%as.data.table()
+  dat%>%
+    mutate(week = julian1%/%7) -> dat
+  dat
 }
 allyears <- years
 names(dat.l) <- years
-dat.df <- rbindlist(dat.l, fill = TRUE)%>%
-  filter(site %in% control_region)%>%
-  filter(vis==1)
+dat.df <- rbindlist(dat.l, fill = TRUE)
 
 dat.df$site.year <- paste0(dat.df$loc, ".", dat.df$year)
 dat.df$site.year <- factor(dat.df$site.year, levels = unique(dat.df$site.year))
@@ -55,80 +41,77 @@ dat.df$site.year <- factor(dat.df$site.year, levels = unique(dat.df$site.year))
 ##FILTER DATA ----
 cat("##FILTER DATA ----- \n")
 
-###condense to daily observations 
+#condense to daily observations 
 daily_dat <- dat.df%>%
-  dplyr::group_by(site.year, year, loc, julian2)%>%
-  dplyr::summarise(RedFox  = as.numeric(any(RedFox>0)),
-                   ArcticFox  = as.numeric(any(ArcticFox>0)),
-                   Bait = as.numeric(any(bait_corr>0)),
-                   newbait = as.numeric(any(newbait==1)),
-                   Npic = n())%>%
-  dplyr::filter(Npic>=CUTOFF)
+  filter(vis==1)%>%
+  filter(site %in% control_region)%>%
+  group_by(site.year, year, loc, week, julian1)%>%
+  summarise(RedFox  = as.numeric(any(RedFox>0)),
+            ArcticFox  = as.numeric(any(ArcticFox>0)),
+            Bait = as.numeric(any(bait_corr>0)),
+            Npic = n())%>%
+  filter(week %in% week_used,
+         Npic >= CUTOFF)
 
-daily_dat <- daily_dat%>%
-  dplyr::group_by(site.year)%>%
-  dplyr::mutate(week = (julian2 - julian2[1]) %/% 7+1)%>%
-  dplyr::group_by(site.year, week)%>%
-  dplyr::mutate(day = 1:n())
+# daily_dat <- daily_dat%>%
+#   group_by(site.year, week)%>%
+#   mutate(Nobs = n())%>%
+#   filter(Nobs>=Nobs_min)
 
-### filter based on number of observation per weeks and number of weeks
+# remove site-year associations that have less than N_week_min
+daily_dat<- daily_dat %>% 
+  group_by(site.year) %>% 
+  mutate(Nweek = length(unique(week)))%>%
+  filter(Nweek>=Nweek_min)
 
-weeks_tokeep <- daily_dat %>% 
-  dplyr::group_by(site.year, week) %>% 
-  dplyr::summarise(Nobs = length(unique(julian2)))%>%
-  dplyr::filter(Nobs>=Nobs_min)
-
-daily_dat <- daily_dat%>%
-  dplyr::inner_join(weeks_tokeep)
-
-sites_tokeep <- daily_dat %>% 
-  dplyr::group_by(site.year) %>% 
-  dplyr::summarise(Nweek = length(unique(week)))%>%
-  dplyr::filter(Nweek>=Nweek_min)
-
-daily_dat <- daily_dat%>%
-  dplyr::inner_join(sites_tokeep)%>%
-  dplyr::filter(week <= nweeks)
-
-###Get the occupancy state (1 = no animal, 2 = RF only, 3 = AF only, 4 = both, NA = NA)
+#Get the occupancy state (1 = no animal, 2 = RF only, 3 = AF only, 4 = both, NA = NA)
 daily_dat$state <- paste0(daily_dat$RedFox,daily_dat$ArcticFox)
 categories <- data.frame(state = c("00", "10", "01", "11"),
                          lvls = c(seq(1:4)))
 daily_dat <- dplyr::left_join(daily_dat, categories, by = "state")
 
-daily_dat$lvls <- factor(daily_dat$lvls, levels = unique(daily_dat$lvls))
-
 ##GET  PARAMETERS ----
 cat("##GET PARAMETERS ----- \n")
-###Number of site.year
+#Number of site.year
 site_infos <- daily_dat%>%
   dplyr::group_by(site.year,loc,year)%>%
   dplyr::summarize()
+site.year <- unique(daily_dat$site.year)
 M <- nrow(site_infos)
 
-###Number of preliminary seasons
-T <- nweeks
+#Number of preliminary seasons
+T <- length(week_used)
+daily_dat <- daily_dat%>%
+  group_by(site.year)%>%
+  mutate(t = week-min(week)+1)
 
-### Number of days per week
+# Number of days per week
 K <- 7
+daily_dat <- daily_dat%>%
+  group_by(site.year,week)%>%
+  mutate(k = julian1-julian1[1]+1)
 
 ##GET DATA ARRAY M*T*K----
 cat("##DATA AS ARRAY----- \n")
 #fill daily_dat with NA for julian days not sampled 
-daily_dat_all <- data.frame(site.year = rep(site_infos$site.year, each = K*T),
-                            week = rep(1:T, each = K, M),
-                            day= rep(1:7,T*M))
-daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "day"),all=T)
+daily_dat_all <- data.frame(site.year = rep(site.year, each = K*T),
+                            t = rep(1:T, each = K, M),
+                            k = rep(1:K, M*T))
+daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "t", "k"),all=T)
 
-###Get array M*T*K
+#Get array M*T*K
 ob_state <- array(daily_dat$lvls, dim=c(K,T,M))
 ob_state <- aperm(ob_state, c(3,2,1))
 
-###Get minimal occupancy state
+photos_samp <- array(daily_dat$lvls, dim=c(K,T,M))
+photos_samp <- aperm(photos_samp, c(3,2,1))
+
+#Get minimal occupancy state
+daily_dat$lvls <- factor(daily_dat$lvls, levels = unique(daily_dat$lvls))
 min_occ <- daily_dat%>%
-  dplyr::group_by(site.year, week)%>%
-  dplyr::summarise(RedFox = as.numeric(any(RedFox>0, na.rm=T)),
-                   ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
+  group_by(site.year, t)%>%
+  summarise(RedFox = as.numeric(any(RedFox>0, na.rm=T)),
+            ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
 
 min_occ$state <- paste0(min_occ$RedFox, min_occ$ArcticFox)
 min_occ <- left_join(min_occ, categories, by = "state")
@@ -175,7 +158,6 @@ covs$propprod10 <- prod[site_infos$loc,]$propprod10
 ###Get coord. on the PCA space based on geographical features
 
 covs_pca <- prcomp(covs[,c("altitude","distroad", "distforest", "distcoast", "propprod5")], scale. = TRUE)
-#ggbiplot(covs_pca)
 
 covs <- cbind(covs, covs_pca$x[,c(1,2)])
 ##PC1: coast to land gradient (CLG)
@@ -209,8 +191,10 @@ covs$rodents_mean <- (covs$rodents_fall+covs$rodents_spr)/2
 covs[,c("altitude", "distroad", "distforest", "distcoast", "propprod5", "propprod10",  "CLG", "FTG", "rodents_fall",
         "rodents_spr","rodents_mean")] <- scale(covs[,c("altitude","distroad", "distforest","distcoast",
                                                         "propprod5", "propprod10", "CLG", "FTG",
-                                                        "rodents_fall","rodents_spr", "rodents_mean")])
+                                                        "rodents_fall","rodents_spr", "rodents_mean")])/2
 
 
 covs$year <- as.numeric(covs$year)
+
+
 
