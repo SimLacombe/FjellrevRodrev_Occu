@@ -25,16 +25,25 @@ rm(list=ls())
 YEARMIN = 2017
 YEARMAX = 2021
 Nobs_min = 3 #min number of days sampled to consider week valid
-Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
+Nweek_min = 3 #min number of weeks sampled a year to consider the year valid
 nweeks = 7 #max number of weeks per year
 CUTOFF = 35 #min number of photo a day to consider the observation valid
 
 ##GET LIBRARIES, PATHS AND FILENAMES-----
-sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel'),
+sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggplot2'),
        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
 ## GET DATA AND UTILITY FUNCTIONS ----
 source("src/format_data.R")
 source("src/fit_models_utility_functions.R")
+
+## PLOT DATASET STRUCTURE ----
+# daily_dat%>%
+#   dplyr::mutate(julian_corr = (7*week+day))%>%
+#   dplyr::filter(!is.na(loc))%>%
+#   ggplot()+
+#   geom_point(aes(x=julian_corr,y=site.year,color=factor(week), pch = newbait==1))+
+#   scale_color_brewer(palette="Dark2")
+
 
 ## MODELS ----
 cat("##START PARALLEL RUNS ----------------\n")
@@ -42,18 +51,18 @@ cat("##START PARALLEL RUNS ----------------\n")
 
 n.chains <- 4
 adapt <- 1000
-burnin <- 5000
+burnin <- 2500
 sample <- ceiling(300)
 thin <- 5
-  
+
 cat("###M----------------\n")
 ######################################################
 #                   MODEL M
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
-psi_covs <- c("int", "CLG", "FTG", "rodents_fall")
-gam_covs <- c("int", "CLG", "FTG", "rodents_fall")
-eps_covs <- c("int", "CLG", "FTG", "rodents_fall")
+psi_covs <- c("int","distroad", "FTG", "rodents_fall")
+gam_covs <- c("int","distroad","FTG", "rodents_fall")
+eps_covs <- c("int","distroad","FTG", "rodents_fall")
 pi_covs  <- c("int")
 tau_covs <- c("int")
 rho_covs <- c("rodents_fall")
