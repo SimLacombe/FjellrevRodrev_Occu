@@ -10,8 +10,8 @@
 # Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
 # CUTOFF = 35 #min number of photo a day to consider the observation valid
 
-julian_used = 49:118
-week_used = 7:16
+julian_used = 49:97
+week_used = 7:13
 
 data.path <- "data/main_dat"
 data.filenames <- list.files(path = data.path, pattern = ".rds")
@@ -49,12 +49,6 @@ cat("##FILTER DATA ----- \n")
 #   - site.years with more than n_week_min weeks
 
 #Get number of photos with vis = 1 per day
-photos_per_day <- dat.df%>%
-  filter(vis==1)%>%
-  filter(site %in% control_region)%>%
-  group_by(site.year, year, loc, week, julian1)%>%
-  summarise(photos = n())%>%
-  filter(week %in% week_used)
 
 #condense to daily observations 
 daily_dat <- dat.df%>%
@@ -63,32 +57,28 @@ daily_dat <- dat.df%>%
   group_by(site.year, year, loc, week, julian1)%>%
   summarise(RedFox  = as.numeric(any(RedFox>0)),
             ArcticFox  = as.numeric(any(ArcticFox>0)),
-            Bait = as.numeric(any(bait_corr>0)))%>%
-  filter(week %in% week_used)
+            Bait = as.numeric(any(bait_corr>0)),
+            newbait = as.numeric(any(newbait>0)),
+            Npic = n())%>%
+  filter(week %in% week_used,
+         Npic >= CUTOFF)
 
-#If less than CUTOFF photos, day considered as NA
-daily_dat[photos_per_day$photos<CUTOFF, c("RedFox", "ArcticFox")] <- NA
+# daily_dat <- daily_dat%>%
+#   group_by(site.year, week)%>%
+#   mutate(Nobs = n())%>%
+#   filter(Nobs>=Nobs_min)
+
+# remove site-year associations that have less than N_week_min
+daily_dat<- daily_dat %>% 
+  group_by(site.year) %>% 
+  mutate(Nweek = length(unique(week)))%>%
+  filter(Nweek>=Nweek_min)
 
 #Get the occupancy state (1 = no animal, 2 = RF only, 3 = AF only, 4 = both, NA = NA)
 daily_dat$state <- paste0(daily_dat$RedFox,daily_dat$ArcticFox)
 categories <- data.frame(state = c("00", "10", "01", "11"),
                          lvls = c(seq(1:4)))
 daily_dat <- dplyr::left_join(daily_dat, categories, by = "state")
-
-# remove site-year associations that have less than N_week_min
-site.year_info <- daily_dat %>% 
-  group_by(site.year) %>% 
-  summarise(year = unique(year[!is.na(year)]),
-            loc = unique(loc[!is.na(loc)]),
-            Nweek = length(unique(week)))
-
-daily_dat<- daily_dat[-which(daily_dat$site.year %in%
-                               site.year_info$site.year[site.year_info$Nweek < Nweek_min]),]
-
-photos_per_day <- photos_per_day[-which(photos_per_day$site.year %in%
-                                          site.year_info$site.year[site.year_info$Nweek < Nweek_min]),]
-
-site.year_info <- filter(site.year_info, Nweek >= Nweek_min)
 
 ##GET  PARAMETERS ----
 cat("##GET PARAMETERS ----- \n")
@@ -102,17 +92,25 @@ M <- nrow(site_infos)
 #Number of preliminary seasons
 T <- length(week_used)
 
+daily_dat <- daily_dat%>%
+  group_by(site.year)%>%
+  mutate(t = week-min(week)+1)
+
 # Number of days per week
 K <- 7
+
+daily_dat <- daily_dat%>%
+  group_by(site.year,week)%>%
+  mutate(k = julian1-julian1[1]+1)
 
 ##GET DATA ARRAY M*T*K----
 cat("##DATA AS ARRAY----- \n")
 #fill daily_dat with NA for julian days not sampled 
 daily_dat_all <- data.frame(site.year = rep(site.year, each = K*T),
-                            week = rep(week_used, each = K, M),
-                            julian1= rep(julian_used, M))
-daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "julian1"),all=T)
-photos_per_day <- merge(photos_per_day,daily_dat_all, by = c("site.year", "week", "julian1"),all=T)
+                            t = rep(1:T, each = K, M),
+                            k= rep(1:K, M*T))
+daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "t", "k"),all=T)
+
 
 #Get array M*T*K
 ob_state <- array(daily_dat$lvls, dim=c(K,T,M))
@@ -124,7 +122,7 @@ photos_samp <- aperm(photos_samp, c(3,2,1))
 #Get minimal occupancy state
 daily_dat$lvls <- factor(daily_dat$lvls, levels = unique(daily_dat$lvls))
 min_occ <- daily_dat%>%
-  group_by(site.year, week)%>%
+  group_by(site.year, t)%>%
   summarise(RedFox = as.numeric(any(RedFox>0, na.rm=T)),
             ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
 
