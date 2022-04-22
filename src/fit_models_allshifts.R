@@ -25,9 +25,10 @@ rm(list=ls())
 YEARMIN = 2017
 YEARMAX = 2021
 
+all_shift = 0:6
+
 julian_used = 49:104
 week_used = 7:14
-T=7
 
 Nobs_min = 3 #min number of days sampled to consider week valid
 Nweek_min = 3 #min number of weeks sampled a year to consider the year valid
@@ -38,7 +39,6 @@ CUTOFF = 35 #min number of photo a day to consider the observation valid
 sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggplot2'),
        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
 ## GET DATA AND UTILITY FUNCTIONS ----
-source("src/format_data_bysite.R")
 source("src/fit_models_utility_functions.R")
 
 ## MODELS ----
@@ -51,6 +51,14 @@ burnin <- 2500
 sample <- ceiling(300)
 thin <- 5
 
+numCores <- length(all_shift)
+
+cl <- makeCluster(numCores, type = "PSOCK")
+clusterEvalQ(cl, sink(paste0("model_progress/",Sys.getpid(), ".txt")))
+registerDoParallel(cl)
+
+foreach (shift = allshift, .packages = packages) %dopar%{
+source("src/format_data_bysite.R")
 cat("###M----------------\n")
 ######################################################
 #                   MODEL M
@@ -97,4 +105,5 @@ M <- run.jags(model = "src/dcom.R",
 
 M_matrix <- as.matrix(as.mcmc.list(M), chains = TRUE)
 
-saveRDS(M, "outputs/M.rds")
+saveRDS(M, paste0("outputs/M_s",shift,".rds"))
+}
