@@ -22,10 +22,10 @@
 # install.packages("doParallel")
 rm(list=ls())
 ##PARAMETERS TO SET MANUALY----
-YEARMIN = 2017
-YEARMAX = 2021
+YEARMIN = 2006
+YEARMAX = 2016
 
-all_shift = 0:6
+all_shift = as.numeric(0:6)
 
 julian_used = 49:104
 week_used = 7:14
@@ -40,7 +40,7 @@ sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'Lapla
        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
 ## GET DATA AND UTILITY FUNCTIONS ----
 source("src/fit_models_utility_functions.R")
-
+source("src/format_data.R")
 ## MODELS ----
 cat("##START PARALLEL RUNS ----------------\n")
 ###GLOBAL MODEL PARAMETERS
@@ -55,10 +55,21 @@ numCores <- length(all_shift)
 
 cl <- makeCluster(numCores, type = "PSOCK")
 clusterEvalQ(cl, sink(paste0("model_progress/",Sys.getpid(), ".txt")))
+clusterExport(cl, ls())
 registerDoParallel(cl)
 
-foreach (shift = allshift, .packages = packages) %dopar%{
-source("src/format_data_bysite.R")
+foreach(sh = all_shift, .packages = packages) %dopar%{
+
+  dat <- format_data(sh)
+  allyears <- dat[[1]]
+  M <- dat[[2]]
+  T <- dat[[3]]
+  K <- dat[[4]]
+  covs <- dat[[5]]
+  ob_state <- dat[[6]]
+  init <- dat[[7]]
+  bait <- dat[[8]]
+  
 cat("###M----------------\n")
 ######################################################
 #                   MODEL M
@@ -103,7 +114,6 @@ M <- run.jags(model = "src/dcom.R",
               method = "parallel")
 
 
-M_matrix <- as.matrix(as.mcmc.list(M), chains = TRUE)
-
-saveRDS(M, paste0("outputs/M_s",shift,".rds"))
+saveRDS(M, paste0("outputs/M_s",sh,".rds"))
 }
+stopCluster(cl)

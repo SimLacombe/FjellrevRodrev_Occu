@@ -9,7 +9,7 @@
 # Nobs_min = 3 #min number of days sampled to consider week valid
 # Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
 # CUTOFF = 35 #min number of photo a day to consider the observation valid
-
+format_data <- function(sh){
 data.path <- "data/main_dat"
 data.filenames <- list.files(path = data.path, pattern = ".rds")
 cov.path <- "data/covs/camera_attributes_2019.txt"
@@ -28,7 +28,7 @@ cat("##LOAD DATA ----- \n")
 dat.l <- foreach(i = data.filenames[years_id]) %do%{
   dat <-  readRDS(file = paste0(data.path, "/", i))%>%as.data.table()
   dat%>%
-    mutate(week = (julian2 - shift )%/%7) -> dat
+    mutate(week = (julian2 - sh)%/%7) -> dat
   dat
 }
 allyears <- years
@@ -197,5 +197,6 @@ covs[,c("altitude", "distroad", "distforest", "distcoast", "propprod5", "proppro
 
 covs$year <- as.numeric(covs$year)
 
-
+return(list(allyears, M, T, K, covs, ob_state, init, bait))
+}
 
