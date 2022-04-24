@@ -41,4 +41,4 @@ vignettes/*.pdf
 #Data
 /data
 /outputs
-
+/model_progress

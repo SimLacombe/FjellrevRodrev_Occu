@@ -1,0 +1,47 @@
+##LOAD DATA ----- 
+##FILTER DATA ----- 
+##GET PARAMETERS ----- 
+##DATA AS ARRAY----- 
+##GET COVARIATES ----- 
+###M----------------
+Calling 4 simulations using the parallel method...
+Following the progress of chain 1 (the program will wait for all chains
+to finish before continuing):
+Welcome to JAGS 4.3.0 on Fri Apr 22 15:45:14 2022
+JAGS is free software and comes with ABSOLUTELY NO WARRANTY
+Loading module: basemod: ok
+Loading module: bugs: ok
+. . Reading data file data.txt
+. Compiling model graph
+   Resolving undeclared variables
+   Allocating nodes
+Graph information:
+   Observed stochastic nodes: 3669
+   Unobserved stochastic nodes: 2773
+   Total graph size: 20204
+
+WARNING: Unused variable(s) in data table:
+tau_cov
+
+. Reading parameter file inits1.txt
+. Initializing model
+. Adapting 1000
+-------------------------------------------------| 1000
+++++++++++++++++++++++++++++++++++++++++++++++++++ 100%
+Adaptation successful
+. Updating 2500
+-------------------------------------------------| 2500
+************************************************** 100%
+. . . . . . . . . . Updating 1500
+-------------------------------------------------| 1500
+************************************************** 100%
+. . . . Updating 0
+. Deleting model
+. 
+All chains have finished
+Simulation complete.  Reading coda files...
+Coda files loaded successfully
+Note: Summary statistics were not produced as there are >50 monitored
+variables
+[To override this behaviour see ?add.summary and ?runjags.options]
+FALSEFinished running the simulation
