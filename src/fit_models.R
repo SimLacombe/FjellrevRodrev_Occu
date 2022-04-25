@@ -22,8 +22,8 @@
 # install.packages("doParallel")
 rm(list=ls())
 ##PARAMETERS TO SET MANUALY----
-YEARMIN = 2006
-YEARMAX = 2016
+YEARMIN = 2017
+YEARMAX = 2021
 
 T=7
 

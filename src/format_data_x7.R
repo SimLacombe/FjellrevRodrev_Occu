@@ -1,17 +1,14 @@
-
-
-
-rm(list=ls())
-##PARAMETERS TO SET MANUALY----
-YEARMIN = 2006
-YEARMAX = 2016
-
-T=7
-
-Nobs_min = 3 #min number of days sampled to consider week valid
-Nweek_min = 3 #min number of weeks sampled a year to consider the year valid
-
-CUTOFF = 35 #min number of photo a day to consider the observation valid
+# rm(list=ls())
+# ##PARAMETERS TO SET MANUALY----
+# YEARMIN = 2006
+# YEARMAX = 2016
+# 
+# T=7
+# 
+# Nobs_min = 3 #min number of days sampled to consider week valid
+# Nweek_min = 3 #min number of weeks sampled a year to consider the year valid
+# 
+# CUTOFF = 35 #min number of photo a day to consider the observation valid
 
 shifts <- 0:6
 
