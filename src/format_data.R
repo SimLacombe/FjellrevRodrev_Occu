@@ -1,15 +1,3 @@
-# rm(list=ls())
-# 
-# sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggbiplot'),
-#        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
-# 
-# ##PARAMETERS TO SET MANUALY----
-# YEARMIN = 2006
-# YEARMAX = 2016
-# Nobs_min = 3 #min number of days sampled to consider week valid
-# Nweek_min = 4 #min number of weeks sampled a year to consider the year valid
-# CUTOFF = 35 #min number of photo a day to consider the observation valid
-format_data <- function(sh){
 data.path <- "data/main_dat"
 data.filenames <- list.files(path = data.path, pattern = ".rds")
 cov.path <- "data/covs/camera_attributes_2019.txt"
@@ -26,10 +14,7 @@ control_region <- c("komag", "nyborg", "stjernevann")
 cat("##LOAD DATA ----- \n")
 
 dat.l <- foreach(i = data.filenames[years_id]) %do%{
-  dat <-  readRDS(file = paste0(data.path, "/", i))%>%as.data.table()
-  dat%>%
-    mutate(week = (julian2 - sh)%/%7) -> dat
-  dat
+  readRDS(file = paste0(data.path, "/", i))%>%as.data.table()
 }
 allyears <- years
 names(dat.l) <- years
@@ -41,25 +26,27 @@ dat.df$site.year <- factor(dat.df$site.year, levels = unique(dat.df$site.year))
 ##FILTER DATA ----
 cat("##FILTER DATA ----- \n")
 
-#condense to daily observations 
+#To daily observations 
 daily_dat <- dat.df%>%
   filter(vis==1)%>%
   filter(site %in% control_region)%>%
-  group_by(site.year, year, loc, week, julian2)%>%
+  group_by(site.year, year, loc, julian2)%>%
   summarise(RedFox  = as.numeric(any(RedFox>0)),
             ArcticFox  = as.numeric(any(ArcticFox>0)),
             Bait = as.numeric(any(bait_corr>0)),
             newbait = as.numeric(any(newbait>0)),
             Npic = n())%>%
-  filter(week %in% week_used,
-         Npic >= CUTOFF)
+  filter(Npic >= CUTOFF)
 
-# daily_dat <- daily_dat%>%
-#   group_by(site.year, week)%>%
-#   mutate(Nobs = n())%>%
-#   filter(Nobs>=Nobs_min)
+#Define weeks
+daily_dat <- daily_dat%>%
+  group_by(site.year, year, loc)%>%
+  mutate(week = (julian2 - julian2[1])%/%7+1)%>%
+  group_by(site.year, week)%>%
+  mutate(Nobs = n())%>%
+  filter(week<=T,
+         Nobs>=Nobs_min)
 
-# remove site-year associations that have less than N_week_min
 daily_dat<- daily_dat %>% 
   group_by(site.year) %>% 
   mutate(Nweek = length(unique(week)))%>%
@@ -69,48 +56,44 @@ daily_dat<- daily_dat %>%
 daily_dat$state <- paste0(daily_dat$RedFox,daily_dat$ArcticFox)
 categories <- data.frame(state = c("00", "10", "01", "11"),
                          lvls = c(seq(1:4)))
-daily_dat <- dplyr::left_join(daily_dat, categories, by = "state")
+daily_dat <- left_join(daily_dat, categories, by = "state")
 
 ##GET  PARAMETERS ----
 cat("##GET PARAMETERS ----- \n")
 #Number of site.year
 site_infos <- daily_dat%>%
-  dplyr::group_by(site.year,loc,year)%>%
-  dplyr::summarize()
+  group_by(site.year,loc,year)%>%
+  summarize()
+
 site.year <- unique(daily_dat$site.year)
+
 M <- nrow(site_infos)
 
 #Number of preliminary seasons
-T <- length(week_used)
-daily_dat <- daily_dat%>%
-  group_by(site.year)%>%
-  mutate(t = week-min(week)+1)
+T
 
 # Number of days per week
 K <- 7
 daily_dat <- daily_dat%>%
   group_by(site.year,week)%>%
-  mutate(k = julian2-julian2[1]+1)
+  mutate(obs = julian2-julian2[1]+1)
 
 ##GET DATA ARRAY M*T*K----
 cat("##DATA AS ARRAY----- \n")
 #fill daily_dat with NA for julian days not sampled 
 daily_dat_all <- data.frame(site.year = rep(site.year, each = K*T),
-                            t = rep(1:T, each = K, M),
-                            k = rep(1:K, M*T))
-daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "t", "k"),all=T)
+                            week = rep(1:T, each = K, M),
+                            obs = rep(1:K, M*T))
+daily_dat <- merge(daily_dat,daily_dat_all, by = c("site.year", "week", "obs"),all=T)
 
 #Get array M*T*K
 ob_state <- array(daily_dat$lvls, dim=c(K,T,M))
 ob_state <- aperm(ob_state, c(3,2,1))
 
-photos_samp <- array(daily_dat$lvls, dim=c(K,T,M))
-photos_samp <- aperm(photos_samp, c(3,2,1))
-
 #Get minimal occupancy state
 daily_dat$lvls <- factor(daily_dat$lvls, levels = unique(daily_dat$lvls))
 min_occ <- daily_dat%>%
-  group_by(site.year, t)%>%
+  group_by(site.year, week)%>%
   summarise(RedFox = as.numeric(any(RedFox>0, na.rm=T)),
             ArcticFox = as.numeric(any(ArcticFox>0, na.rm=T)))
 
@@ -192,11 +175,10 @@ covs$rodents_mean <- (covs$rodents_fall+covs$rodents_spr)/2
 covs[,c("altitude", "distroad", "distforest", "distcoast", "propprod5", "propprod10",  "CLG", "FTG", "rodents_fall",
         "rodents_spr","rodents_mean")] <- scale(covs[,c("altitude","distroad", "distforest","distcoast",
                                                         "propprod5", "propprod10", "CLG", "FTG",
-                                                        "rodents_fall","rodents_spr", "rodents_mean")])/2
+                                                        "rodents_fall","rodents_spr", "rodents_mean")])
 
 
 covs$year <- as.numeric(covs$year)
 
-return(list(allyears, M, T, K, covs, ob_state, init, bait))
-}
+
 
