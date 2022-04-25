@@ -22,11 +22,9 @@
 # install.packages("doParallel")
 rm(list=ls())
 ##PARAMETERS TO SET MANUALY----
-YEARMIN = 2017
-YEARMAX = 2021
+YEARMIN = 2006
+YEARMAX = 2016
 
-julian_used = 49:104
-week_used = 7:14
 T=7
 
 Nobs_min = 3 #min number of days sampled to consider week valid
@@ -38,7 +36,7 @@ CUTOFF = 35 #min number of photo a day to consider the observation valid
 sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggplot2'),
        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
 ## GET DATA AND UTILITY FUNCTIONS ----
-source("src/format_data_bysite.R")
+source("src/format_data_x7.R")
 source("src/fit_models_utility_functions.R")
 
 ## MODELS ----
