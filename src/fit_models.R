@@ -36,7 +36,7 @@ CUTOFF = 35 #min number of photo a day to consider the observation valid
 sapply(packages <- c('stringr', 'foreach', 'data.table', 'dplyr','tidyr', 'LaplacesDemon', 'runjags', 'rjags', 'coda', 'doParallel', 'ggplot2'),
        function(x) suppressPackageStartupMessages(require(x , character.only = TRUE, quietly = TRUE)))
 ## GET DATA AND UTILITY FUNCTIONS ----
-source("src/format_data_x7.R")
+source("src/format_data.R")
 source("src/fit_models_utility_functions.R")
 
 ## MODELS ----
@@ -45,8 +45,8 @@ cat("##START PARALLEL RUNS ----------------\n")
 
 n.chains <- 4
 adapt <- 1000
-burnin <- 2500
-sample <- ceiling(300)
+burnin <- 10000
+sample <- 5000
 thin <- 5
 
 cat("###M----------------\n")
