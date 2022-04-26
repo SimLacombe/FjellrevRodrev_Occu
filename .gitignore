@@ -42,3 +42,4 @@ vignettes/*.pdf
 /data
 /outputs
 /model_progress
+/src/unused_src
