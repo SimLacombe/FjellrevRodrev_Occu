@@ -6,6 +6,14 @@
 ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ##
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##
+##      Arctic Foxes in Varanger
+##               --
+##            Fit DCOMs
+##
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##
 ##***************************
 ## INSERT DESCRIPTION HERE
 ##***************************
@@ -23,7 +31,7 @@
 rm(list=ls())
 ##PARAMETERS TO SET MANUALY----
 YEARMIN = 2006
-YEARMAX = 2016
+YEARMAX = 2021
 
 T=7
 
@@ -54,11 +62,11 @@ cat("###M----------------\n")
 #                   MODEL M
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-psi_covs <- c("int","CLG","FTG", "rodents_fall")
-gam_covs <- c("int","CLG","FTG", "rodents_fall")
-eps_covs <- c("int","CLG","FTG", "rodents_fall")
-pi_covs  <- c("int")
-tau_covs <- c("int")
+psi_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
+gam_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
+eps_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
+pi_covs  <- c("int", "treatment")
+tau_covs <- c("int", "treatment")
 rho_covs <- c("rodents_fall")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
