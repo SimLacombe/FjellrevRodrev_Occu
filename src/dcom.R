@@ -113,11 +113,11 @@ rdm[j, 4, 4, 2] <- exp( rho[1, j] + rho_bait[1] + rho[2, j] + rho_bait[2]) #|OS 
 ######
 for( i in 1:nspec ) {
 # base occupancy
-psinit[i ,j]  <- yr_psi[i, year_cov[j,1]] + inprod( a[i, ], psi_cov[j, ] )
+psinit[i ,j]  <- inprod( a[i, ], psi_cov[j, ] )
 # base colonization
-gam[i, j] <-     yr_gam[i, year_cov[j,1]] + inprod( b[i, ], gam_cov[j, ] ) 
+gam[i, j] <-     inprod( b[i, ], gam_cov[j, ] ) 
 # base extinction
-eps[i, j] <-     yr_eps[i, year_cov[j,1]] + inprod( d[i, ], eps_cov[j, ] )
+eps[i, j] <-     inprod( d[i, ], eps_cov[j, ] )
 # base detection probability
 rho[i,j] <-      yr_rho[i, year_cov[j,1]] + inprod(f[i, ], rho_cov[j, ] ) 
 # inxs on colonization
@@ -161,9 +161,6 @@ eps_one[i, j] <- inprod( d[i, ], eps_cov[j, ] ) + tau[i, j]
     }
     for ( yrp in 1:nyear ){
       yr_rho[i, yrp] ~ dlogis(0, 1)
-      yr_psi[i, yrp] ~ dlogis(0, 1)
-      yr_gam[i, yrp] ~ dlogis(0, 1)
-      yr_eps[i, yrp] ~ dlogis(0, 1)
     }
     rho_bait[i] ~ dlogis(0,1)
   }
