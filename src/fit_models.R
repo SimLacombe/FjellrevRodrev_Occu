@@ -88,7 +88,7 @@ data_list <- list(psi_cov = covs[,psi_covs]%>%as.matrix(),
 
 
 M <- run.jags(model = "src/dcom.R",
-              monitor = c("a", "b", "d","f","g","h", "rho_bait", "yr_rho", "z"),
+              monitor = c("a", "b", "d","f","g","h", "rho_bait", "yr_psi", "yr_gam", "yr_eps", "yr_rho", "z"),
               data = data_list,
               n.chains = n.chains,
               inits = inits,
