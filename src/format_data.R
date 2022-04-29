@@ -181,3 +181,7 @@ covs[,c("altitude", "distroad", "distforest", "distcoast", "propprod5", "proppro
 covs$year <- as.numeric(covs$year)
 covs$treatment <- as.numeric(site_infos$year>=2016)
 
+covs$treatment.CLG <- covs$treatment * covs$CLG
+covs$treatment.FTG <- covs$treatment * covs$FTG
+
+
