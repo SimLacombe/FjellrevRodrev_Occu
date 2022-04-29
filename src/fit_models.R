@@ -54,9 +54,9 @@ cat("###M----------------\n")
 #                   MODEL M
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-psi_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
-gam_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
-eps_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
+psi_covs <- c("int","CLG","FTG", "rodents_fall", "treatment.CLG", "treatment.FTG")
+gam_covs <- c("int","CLG","FTG", "rodents_fall", "treatment.CLG", "treatment.FTG")
+eps_covs <- c("int","CLG","FTG", "rodents_fall", "treatment.CLG", "treatment.FTG")
 pi_covs  <- c("int", "treatment")
 tau_covs <- c("int", "treatment")
 rho_covs <- c("rodents_fall")
