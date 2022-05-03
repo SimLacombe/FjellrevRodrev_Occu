@@ -117,6 +117,8 @@ get_gof_closed <- function(mm = NULL, data_list = NULL, e = .0001, Nsim = 1000){
   detfreq <- apply(y, c(1,2), function(x) {table(factor(x, levels = 1:4))})
   
   chi2_l <- chi2.sim_l <- rep(0,Nsim)
+  chi2_RF_l <- chi2_RF.sim_l <- chi2_AF_l <- chi2_AF.sim_l <- rep(0,Nsim)
+  chi2_sites_m <- chi2_sites.sim_m <- matrix(0, nsite, Nsim)  
   
   cat(paste0("-------------------------------------------------| ", Nsim, "\n"))
   O <- sample(1:nrow(mm),Nsim)
@@ -195,14 +197,62 @@ get_gof_closed <- function(mm = NULL, data_list = NULL, e = .0001, Nsim = 1000){
     detfreq_sim <- apply(y.sim, c(1,2), function(x) {table(factor(x, levels = 1:4))})
     detfreq_exp <- apply(y.exp, c(1,2), function(x) {apply(x,2,function(x) sum(x, na.rm=T))})
     
-    #COMPUTE CHI²
+    #Get chi 2 residuals 
     
-    chi2 <- sum((detfreq - detfreq_exp)^2/(detfreq_exp+e))
-    chi2.sim <- sum((detfreq_sim - detfreq_exp)^2/(detfreq_exp+e))
+    chi2_eps <- (detfreq - detfreq_exp)^2/(detfreq_exp+e)
+    chi2.sim_eps <- (detfreq_sim - detfreq_exp)^2/(detfreq_exp+e)
+    
+    #COMPUTE global CHI²
+    
+    chi2 <- sum(chi2_eps)
+    chi2.sim <- sum(chi2.sim_eps)
     chi2_l[i] <- chi2
     chi2.sim_l[i] <- chi2.sim
     
+    #COMPUTE CHI² for species 
+    
+    chi2_RF <- sum(chi2_eps[c(2,4),,])
+    chi2_RF.sim <- sum(chi2.sim_eps[c(2,4),,])
+    
+    chi2_AF <- sum(chi2_eps[c(3,4),,])
+    chi2_AF.sim <- sum(chi2.sim_eps[c(3,4),,])
+    
+    chi2_RF_l[i] <- chi2_RF
+    chi2_RF.sim_l[i] <- chi2_RF.sim
+    
+    chi2_AF_l[i] <- chi2_AF
+    chi2_AF.sim_l[i] <- chi2_AF.sim
+    
+    #COMPUTE CHI² for sites 
+    
+    chi2_sites <- apply(chi2_eps, 2, sum)
+    chi2_sites.sim <- apply(chi2.sim_eps, 2, sum)
+    
+    chi2_sites_m[, i] <- chi2_sites
+    chi2_sites.sim_m[, i] <- chi2_sites.sim
   }
-  return(data.frame(chi2.obs = chi2_l, chi2.sim=chi2.sim_l))
+  
+  res_sites_df <- as.data.frame(t(chi2_sites_m - chi2_sites.sim_m))
+  colnames(res_sites_df) <- covs$site.year
+  
+  res_sites_df <- res_sites_df%>%
+    pivot_longer(cols = covs$site.year)%>%
+    mutate(year      = rep(covs$year,           1000),
+           loc       = rep(covs$loc,            1000),
+           treatment = rep(covs$treatment,      1000),
+           region    = rep(substr(covs$loc,1,1), 1000),
+           CLG       = rep(covs$CLG,            1000),
+           FTG       = rep(covs$FTG,            1000),
+           rodents   = rep(covs$rodents_fall,   1000))%>%
+    mutate(CLG.bins      = cut_number(CLG,     n= 10),
+           FTG.bins      = cut_number(FTG,     n= 10),
+           rodents.bins  = cut_number(rodents, n= 10))
+  
+  return(list(GLOBAL = data.frame(chi2.obs = chi2_l,
+                                  chi2.sim=chi2.sim_l),
+              SPECIES = data.frame(chi2.obs = c(chi2_RF_l,chi2_AF_l),
+                                   chi2.sim = c(chi2_RF.sim_l,chi2_AF.sim_l), 
+                                   species = rep(c("RF","AF"), each = Nsim)),
+              SITES = res_sites_df))
 }
 

@@ -62,9 +62,10 @@ cat("###M----------------\n")
 #                   MODEL M
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-psi_covs <- c("int","CLG","FTG", "rodents_fall", "treatment", "treatment.CLG", "treatment.FTG")
-gam_covs <- c("int","CLG","FTG", "rodents_fall", "treatment", "treatment.CLG", "treatment.FTG")
-eps_covs <- c("int","CLG","FTG", "rodents_fall", "treatment", "treatment.CLG", "treatment.FTG")
+
+psi_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
+gam_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
+eps_covs <- c("int","CLG","FTG", "rodents_fall", "treatment")
 pi_covs  <- c("int", "treatment")
 tau_covs <- c("int", "treatment")
 rho_covs <- c("rodents_fall")
@@ -87,8 +88,8 @@ data_list <- list(psi_cov = covs[,psi_covs]%>%as.matrix(),
                   bait=bait)
 
 
-M <- run.jags(model = "src/dcom.R",
-              monitor = c("a", "b", "d","f","g","h", "rho_bait", "yr_psi", "yr_gam", "yr_eps", "yr_rho", "z"),
+M <- run.jags(model = "src/dcom_maxinxs.R",
+              monitor = c("a", "b", "d","f","g","h", "bait_", "yr_rho", "z"),
               data = data_list,
               n.chains = n.chains,
               inits = inits,
